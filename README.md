@@ -1,5 +1,8 @@
 # Multi_Traductor — navegador Android con interpretación local
 
+> **Licencia: uso personal y no comercial.** Se permite el uso privado de los componentes originales del proyecto, bajo las condiciones de [LICENSE](LICENSE). **Todo uso comercial requiere autorización previa y un convenio por escrito con Master-Cas.** Para solicitarlo, [contactar al titular por GitHub Issues](https://github.com/Master-Cas/Multi_Traductor/issues). Las dependencias de terceros mantienen sus propias licencias.
+
+
 **Estado: prototipo 0.2.3, reconocimiento y traducción local comprobados en tablet; en validación de compatibilidad.** App Android en Kotlin con WebView y franja de traducción inferior. Diseñada para Android 14 / teléfonos de gama media. `minSdk 29`, `targetSdk 34`, salida nativa ARM64; un dispositivo con Android 16 también es compatible.
 
 ## Motor totalmente en el dispositivo
