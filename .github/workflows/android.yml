@@ -15,9 +15,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      # GitHub-hosted ubuntu-latest provides Android command-line tools.
-      # Do not request the retired SDK package named 'tools'.
-      - run: yes | sdkmanager --licenses >/dev/null || true
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
