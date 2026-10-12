@@ -1,6 +1,6 @@
 # Multi_Traductor — navegador Android con interpretación local
 
-**Estado: prototipo 0.2.0, en validación.** App Android en Kotlin con WebView y franja de traducción inferior. Diseñada para Android 14 / teléfonos de gama media. `minSdk 29`, `targetSdk 34`, salida nativa ARM64; un dispositivo con Android 16 también es compatible.
+**Estado: prototipo 0.2.3, reconocimiento y traducción local comprobados en tablet; en validación de compatibilidad.** App Android en Kotlin con WebView y franja de traducción inferior. Diseñada para Android 14 / teléfonos de gama media. `minSdk 29`, `targetSdk 34`, salida nativa ARM64; un dispositivo con Android 16 también es compatible.
 
 ## Motor totalmente en el dispositivo
 
@@ -25,7 +25,7 @@ SHA-256: `818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7`
 
 ## Alcance y limitaciones
 
-- La captura de **WebAudio** ya se comprobó en una Samsung SM-P620 con Android 16. Falta validar voz → texto → español en hardware con esta nueva versión, y medir latencias de los modelos.
+- La captura de **WebAudio** ya se comprobó en una Samsung SM-P620 con Android 16. Se validó voz → texto → español en hardware con esta versión. En la Samsung SM-P620 Android 16, Whisper Tiny q5_1 compilado con `-O3`, 4 hilos y contexto 512: 3,3 s de reconocimiento para el primer fragmento de 5 s y 2,2 s para el segundo; ML Kit tradujo el primero en 0,34 s con el modelo ya instalado. Los resultados varían por dispositivo e idioma.
 - Los videos protegidos, DRM, YouTube y algunos reproductores pueden impedir la captura. **No** existe una solución universal para evitar esas restricciones.
 - Whisper Tiny puede producir errores o frases ficticias con música/ruido; esta versión usa solo un filtro de intensidad, aún no un VAD fiable.
 - La traducción en pantalla va con retardo: Whisper necesita escuchar un fragmento completo y procesarlo antes de traducirlo. Los subtítulos todavía no están vinculados al tiempo del video.
@@ -36,3 +36,7 @@ SHA-256: `818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7`
 `third_party/whisper.cpp` es submódulo de https://github.com/ggml-org/whisper.cpp fijado en v1.9.5. Respeta su licencia. El audio de prueba `jfk.wav` proviene de los ejemplos del proyecto upstream.
 
 Compilar: `gradle :app:testDebugUnitTest :app:assembleDebug`. El workflow de GitHub Actions descarga NDK + CMake y genera una APK debug ARM64.
+
+## Compatibilidad Android 16/16 kB
+
+Android 16 mostró un aviso de bibliotecas nativas de ML Kit sin garantía de alineación ELF de 16 kB. La tablet probada ejecuta páginas de 4 kB (`getconf PAGE_SIZE=4096`) y pudo completar la prueba. Antes de una publicación general hay que validar bibliotecas en un dispositivo de 16 kB o actualizar las dependencias.
