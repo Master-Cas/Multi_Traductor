@@ -5,6 +5,9 @@ object CaptureState {
     @Volatile var active = false
     @Volatile var status = "Escucha detenida"
     @Volatile var levelDbfs = -90.0
+    @Volatile var originalText = ""
+    @Volatile var translatedText = ""
+    @Volatile var aiStatus = "Modelo Whisper pendiente"
     @Volatile var framesReceived = 0L
     @Volatile var firstNonSilentTime = 0L
     fun reset() {

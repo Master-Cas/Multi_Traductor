@@ -1,33 +1,38 @@
-# Multi_Traductor
+# Multi_Traductor — navegador Android con interpretación local
 
-Navegador Android con futura traducción local de voz, diseñado para **Android 14 y teléfonos de gama media**.
+**Estado: prototipo 0.2.0, en validación.** App Android en Kotlin con WebView y franja de traducción inferior. Diseñada para Android 14 / teléfonos de gama media. `minSdk 29`, `targetSdk 34`, salida nativa ARM64; un dispositivo con Android 16 también es compatible.
 
-## Fase 1 — validación de captura de audio (NO es todavía un traductor)
+## Motor totalmente en el dispositivo
 
-- Kotlin + WebView: navegación y página de prueba local.
-- Franja inferior reservada para traducción en vertical y horizontal.
-- Permiso explícito de Android para audio interno: RECORD_AUDIO + MediaProjection + foreground service mediaProjection.
-- Medición real de PCM capturable con dBFS (sin guardar audio ni transmitirlo).
-- Filtro por UID propio para no recopilar audio de otras aplicaciones.
-- Compilación y test automatizados en GitHub Actions.
+- `AudioPlaybackCapture`: captura el audio que Android **permite** capturar del navegador, tras permiso `RECORD_AUDIO` y consentimiento de `MediaProjection`. Limitado al UID de nuestra propia app. No captura deliberadamente audio de otras apps.
+- `whisper.cpp` **v1.9.5**, fijado como submódulo Git: reconocimiento multilingüe offline sobre CPU ARM64, modelo `ggml-tiny-q5_1.bin` (~32 MB). No se aloja en el Nitro ni en nuestro VPS.
+- `ML Kit Language Identification` + `ML Kit Translate`: detección de idioma y traducción local a español. Los modelos de traducción necesarios se descargan inicialmente **solo por Wi-Fi**.
+- Segmentos PCM16 a 16 kHz de 5 segundos, máximo un trabajo de reconocimiento simultáneo; se descartan segmentos en vez de acumular retrasos indefinidos.
+- No se graba ni almacena la voz; no hay API de transcripción externa. Navegar por internet y descargar modelos requiere conectividad.
 
-**Pendiente:** validar en un teléfono Android 14 que el audio de WebView sea capturable (su reproductor puede usar otro UID o una política restrictiva). **NO hay Whisper, reconocimiento de voz, traducción ni subtítulos verdaderos** todavía. La barra inferior distingue estas limitaciones.
+## Instalar y probar
 
-### Prueba en un teléfono
-1. Abrir con Android Studio (JDK 17, Gradle 8.9, SDK 35), o descargar la APK debug desde Actions una vez que CI pase.
-2. En «Test», pulsar «♫ Escuchar», autorizar grabación de audio y captura Android.
-3. Pulsar «Emitir tono de prueba» y mirar el medidor dBFS. Si muestra −90 dBFS, investigar compatibilidad de WebView/UID; no afirmar que funciona.
-4. Pulsar «■ Detener» para finalizar el servicio y su notificación.
+1. Clonar **recursivamente**: `git clone --recurse-submodules https://github.com/Master-Cas/Multi_Traductor.git` (usar rama de desarrollo del PR cuando no se haya fusionado a `main`).
+2. Abrir en Android Studio con JDK 17, Android SDK 35, NDK 27.0.12077973 y CMake 3.22.1.
+3. Instalar la APK debug. La app arranca en una página local de **Test** con un tono de 3 s y un archivo de voz de ejemplo `jfk.wav` de whisper.cpp.
+4. Pulsar **Modelo IA** para descargar y verificar el modelo multilingüe por HTTPS (32 MB; SHA-256 fijado).
+5. Pulsar **♫ Escuchar** y conceder permisos de audio y captura de pantalla de Android. Reproducir el ejemplo de voz. Esperar el reconocimiento; puede tardar más que el audio en teléfonos modestos.
+6. En la primera traducción de cada idioma, conectarse a Wi-Fi para que ML Kit descargue su modelo. Después las frases de esos idiomas pueden traducirse sin internet.
+7. Pulsar **■ Detener** para cortar la captura.
 
-### Próximos pasos
-1. Captura de voz real y paquetes PCM de 3–5 s, con VAD.
-2. Whisper.cpp Tiny cuantizado, ejecutándose localmente en el dispositivo.
-3. Traducción de texto offline al español mediante modelos locales.
-4. Sincronización progresiva y optimización de RAM/batería.
-5. Compatibilidad sitio por sitio (no se evitan DRM ni restricciones de YouTube).
+Modelo: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin
+SHA-256: `818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7`
 
-El navegador usa internet al visitar páginas, pero **no requiere Nitro ni VPS para su motor**. Esta fase no envía audio a servidores. AudioPlaybackCapture solo recibe audio permitido por el emisor y por Android.
+## Alcance y limitaciones
 
-Documentación: https://developer.android.com/media/platform/av-capture
+- La captura de **WebAudio** ya se comprobó en una Samsung SM-P620 con Android 16. Falta validar voz → texto → español en hardware con esta nueva versión, y medir latencias de los modelos.
+- Los videos protegidos, DRM, YouTube y algunos reproductores pueden impedir la captura. **No** existe una solución universal para evitar esas restricciones.
+- Whisper Tiny puede producir errores o frases ficticias con música/ruido; esta versión usa solo un filtro de intensidad, aún no un VAD fiable.
+- La traducción en pantalla va con retardo: Whisper necesita escuchar un fragmento completo y procesarlo antes de traducirlo. Los subtítulos todavía no están vinculados al tiempo del video.
+- Para validar realmente Android 14 se necesita además un dispositivo físico Android 14; la tablet de prueba usa Android 16.
 
-Compilar con Gradle 8.9: `gradle :app:testDebugUnitTest :app:assembleDebug`. El proyecto no incluye aún Gradle Wrapper; GitHub Actions instala Gradle durante CI.
+## Prueba técnica y repositorio upstream
+
+`third_party/whisper.cpp` es submódulo de https://github.com/ggml-org/whisper.cpp fijado en v1.9.5. Respeta su licencia. El audio de prueba `jfk.wav` proviene de los ejemplos del proyecto upstream.
+
+Compilar: `gradle :app:testDebugUnitTest :app:assembleDebug`. El workflow de GitHub Actions descarga NDK + CMake y genera una APK debug ARM64.

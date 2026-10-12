@@ -19,6 +19,7 @@ import android.webkit.*
 import android.widget.*
 import cl.bonvallarte.multitraductor.audio.AudioCaptureService
 import cl.bonvallarte.multitraductor.audio.CaptureState
+import cl.bonvallarte.multitraductor.audio.ModelManager
 import java.util.Locale
 
 /** WebView + translation strip + internal-audio feasibility meter. NOT a voice translator yet. */
@@ -27,6 +28,7 @@ class MainActivity : Activity() {
     private lateinit var address: EditText
     private lateinit var subtitle: TextView
     private lateinit var status: TextView
+    private lateinit var aiStatus: TextView
     private lateinit var listen: Button
     private lateinit var toolbar: LinearLayout
     private lateinit var webHolder: FrameLayout
@@ -43,6 +45,8 @@ class MainActivity : Activity() {
                     else String.format(Locale.US,"Capturando sin señal · %.1fs",s.framesReceived / 16000.0)
                 } else s.status
                 listen.text = if (s.active) "■ Detener" else "♫ Escuchar"
+                aiStatus.text = s.aiStatus
+                if (s.translatedText.isNotBlank()) subtitle.text = s.translatedText
             }
             handler.postDelayed(this,450)
         }
@@ -80,6 +84,16 @@ class MainActivity : Activity() {
         toolbar.addView(address,LinearLayout.LayoutParams(0,dp(44),1f))
         toolbar.addView(button("Ir"){navigate()},LinearLayout.LayoutParams(dp(43),dp(44)))
         toolbar.addView(button("Test"){testPage()},LinearLayout.LayoutParams(dp(59),dp(44)))
+        toolbar.addView(button("Modelo IA"){
+            if(ModelManager.installed(this)) {
+                CaptureState.aiStatus="Modelo instalado; pulsa Escuchar"
+            } else {
+                ModelManager.install(applicationContext){message->
+                    CaptureState.aiStatus=message
+                    Toast.makeText(this,message,Toast.LENGTH_SHORT).show()
+                }
+            }
+        },LinearLayout.LayoutParams(dp(102),dp(44)))
         root.addView(toolbar)
         webHolder=FrameLayout(this)
         web=WebView(this)
@@ -107,6 +121,13 @@ class MainActivity : Activity() {
         }
         controls.addView(status,LinearLayout.LayoutParams(0,-2,1f))
         bottom.addView(controls)
+        aiStatus=TextView(this).apply {
+            textSize=11f
+            setTextColor(Color.rgb(210,175,231))
+            text=CaptureState.aiStatus
+            gravity=Gravity.CENTER
+        }
+        bottom.addView(aiStatus)
         root.addView(bottom)
         setContentView(root)
         orientation(resources.configuration.orientation)
@@ -160,7 +181,8 @@ class MainActivity : Activity() {
         if(android.net.Uri.parse(url).scheme in listOf("https","http"))web.loadUrl(url)
     }
     private fun testPage(){
-        val html=assets.open("audio-test.html").bufferedReader().use {it.readText()}
+        val wav=android.util.Base64.encodeToString(assets.open("voice-test.wav").use { it.readBytes() }, android.util.Base64.NO_WRAP)
+        val html=assets.open("audio-test.html").bufferedReader().use {it.readText()}.replace("__WAV_BASE64__",wav)
         web.loadDataWithBaseURL("https://appassets.androidplatform.net/",
             html,"text/html","UTF-8",null)
         address.setText("Prueba audio HTML5")

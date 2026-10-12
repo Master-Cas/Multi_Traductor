@@ -100,6 +100,7 @@ class AudioCaptureService:Service() {
         CaptureState.reset()
         CaptureState.active=true
         CaptureState.status="Escuchando medio permitido"
+        WhisperPipeline.start(applicationContext)
         Thread({
             var lastLogged=0L
             val pcm=ShortArray(2048)
@@ -107,6 +108,7 @@ class AudioCaptureService:Service() {
                 val n=try{audio.read(pcm,0,pcm.size)}catch(e:Exception){break}
                 if(n<=0)break
                 val db=AudioLevelMeter.dbfs(pcm,n)
+                WhisperPipeline.offer(pcm,n,db)
                 CaptureState.levelDbfs=db
                 if (System.currentTimeMillis() - lastLogged >= 800L) {
                     android.util.Log.i("MT_AUDIO_PROBE", "samples=" + CaptureState.framesReceived +
@@ -128,6 +130,7 @@ class AudioCaptureService:Service() {
 
     override fun onDestroy(){
         running.set(false)
+        WhisperPipeline.stop()
         try{recorder?.stop()}catch(e:Exception){}
         try{recorder?.release()}catch(e:Exception){}
         recorder=null
