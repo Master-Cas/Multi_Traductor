@@ -82,6 +82,8 @@ class AudioCaptureService:Service() {
         if(minimum<=0)error("PCM16 no disponible")
         val config=AudioPlaybackCaptureConfiguration.Builder(token)
             .addMatchingUsage(AudioAttributes.USAGE_MEDIA)
+            .addMatchingUsage(AudioAttributes.USAGE_GAME)
+            .addMatchingUsage(AudioAttributes.USAGE_UNKNOWN)
             // Privacy-first: restrict to our app. WebView may be un-capturable:
             // that is precisely what the real-device prototype must establish.
             .addMatchingUid(applicationInfo.uid)
@@ -99,12 +101,19 @@ class AudioCaptureService:Service() {
         CaptureState.active=true
         CaptureState.status="Escuchando medio permitido"
         Thread({
+            var lastLogged=0L
             val pcm=ShortArray(2048)
             while(running.get()){
                 val n=try{audio.read(pcm,0,pcm.size)}catch(e:Exception){break}
                 if(n<=0)break
                 val db=AudioLevelMeter.dbfs(pcm,n)
                 CaptureState.levelDbfs=db
+                if (System.currentTimeMillis() - lastLogged >= 800L) {
+                    android.util.Log.i("MT_AUDIO_PROBE", "samples=" + CaptureState.framesReceived +
+                        " dbfs=" + "%.1f".format(java.util.Locale.US, db) +
+                        " uid=" + applicationInfo.uid)
+                    lastLogged=System.currentTimeMillis()
+                }
                 CaptureState.framesReceived+=n
                 if(db > -48.0 && CaptureState.firstNonSilentTime==0L)
                     CaptureState.firstNonSilentTime=System.currentTimeMillis()
