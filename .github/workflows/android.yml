@@ -5,6 +5,25 @@ on:
   pull_request:
   workflow_dispatch:
 jobs:
+  remove_unlicensed_legacy_artifacts:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/android14-audio-capture-mvp'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Eliminar SOLO artefactos antiguos sin términos adjuntos
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GH_REPO}/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.name == "multi-traductor-debug-apk") | .id' |
+            while IFS= read -r artifact_id; do
+              [ -n "$artifact_id" ] || continue
+              echo "Removing legacy unlicensed artifact ID: $artifact_id"
+              gh api --method DELETE "repos/${GH_REPO}/actions/artifacts/${artifact_id}" >/dev/null
+            done
   build:
     runs-on: ubuntu-latest
     permissions:
