@@ -1,0 +1,24 @@
+MULTI_TRADUCTOR — AVISO IMPORTANTE ANTES DE INSTALAR O USAR
+
+SOLO SE AUTORIZA USO PERSONAL, PRIVADO Y NO COMERCIAL.
+
+El uso comercial o empresarial de los componentes originales de
+Multi_Traductor NO está autorizado sin un CONVENIO COMERCIAL PREVIO
+Y POR ESCRITO con Master-Cas, titular del proyecto.
+
+TAMPOCO SE AUTORIZA LA REDISTRIBUCIÓN del proyecto o APK sin permiso
+adicional del titular, con las salvedades legales y de terceros
+indicadas en LICENSE.
+
+Lee los documentos LICENSE y TERMINOS_Y_CONDICIONES.txt incluidos en
+este paquete. La aplicación solicitará su aceptación explícita antes
+de activar el navegador, la captura de audio o la traducción.
+
+Para solicitar licencia comercial:
+https://github.com/Master-Cas/Multi_Traductor/issues/new/choose
+
+Las dependencias (por ejemplo whisper.cpp, ML Kit y modelos externos)
+conservan sus licencias y condiciones independientes.
+
+Este APK es una compilación de depuración experimental.
+No es una versión comercial ni un producto terminado.

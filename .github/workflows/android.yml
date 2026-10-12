@@ -13,6 +13,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Verificar licencia y términos de uso obligatorio
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s LICENSE
+          test -s TERMINOS_Y_CONDICIONES.txt
+          cmp LICENSE TERMINOS_Y_CONDICIONES.txt
+          cmp LICENSE app/src/main/assets/TERMINOS_Y_CONDICIONES.txt
+          grep -qi 'No se autoriza el uso comercial' LICENSE
+          grep -qi 'convenio comercial previo y por escrito' LICENSE
+          grep -q 'showLicense(required = true' app/src/main/java/cl/bonvallarte/multitraductor/MainActivity.kt
+          grep -q 'acceptedKey' app/src/main/java/cl/bonvallarte/multitraductor/MainActivity.kt
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -25,9 +37,22 @@ jobs:
           gradle-version: '8.9'
       - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1'
       - run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Preparar distribución con licencia OBLIGATORIA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p distribution
+          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.4_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
+          cp LICENSE distribution/LICENSE
+          cp TERMINOS_Y_CONDICIONES.txt distribution/TERMINOS_Y_CONDICIONES.txt
+          cp AVISO_DESCARGA.txt distribution/LEEME_PRIMERO.txt
+          (cd distribution && sha256sum ./*.apk > SHA256SUMS.txt)
+          test -s distribution/LICENSE && test -s distribution/TERMINOS_Y_CONDICIONES.txt
+          cmp distribution/LICENSE distribution/TERMINOS_Y_CONDICIONES.txt
       - uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: multi-traductor-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: MULTI_TRADUCTOR_SOLO_USO_PERSONAL_NO_COMERCIAL_DEBUG
+          path: distribution/
+          if-no-files-found: error
           retention-days: 14

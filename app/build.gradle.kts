@@ -9,8 +9,8 @@ android {
         applicationId = "cl.bonvallarte.multitraductor"
         minSdk = 29
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.2.3"
+        versionCode = 6
+        versionName = "0.2.4"
     }
     ndkVersion = "27.0.12077973"
     defaultConfig { ndk { abiFilters += listOf("arm64-v8a") } }

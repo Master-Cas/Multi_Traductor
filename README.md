@@ -1,5 +1,7 @@
 # Multi_Traductor — navegador Android con interpretación local
 
+> **ANTES DE DESCARGAR O UTILIZAR:** licencia de uso personal y no comercial. La APK obliga a leer y aceptar los términos antes de acceder al navegador. **La distribución por GitHub Actions incluye LICENSE, TERMINOS_Y_CONDICIONES.txt y LEEME_PRIMERO.txt**. Todo uso comercial requiere convenio por escrito.
+>
 > **Licencia: uso personal y no comercial.** Se permite el uso privado de los componentes originales del proyecto, bajo las condiciones de [LICENSE](LICENSE). **Todo uso comercial requiere autorización previa y un convenio por escrito con Master-Cas.** Para solicitarlo, [contactar al titular por GitHub Issues](https://github.com/Master-Cas/Multi_Traductor/issues). Las dependencias de terceros mantienen sus propias licencias.
 
 

@@ -2,6 +2,7 @@ package cl.bonvallarte.multitraductor
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -12,6 +13,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import java.security.MessageDigest
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -35,6 +37,98 @@ class MainActivity : Activity() {
     private var customVideo: View? = null
     private var videoCallback: WebChromeClient.CustomViewCallback? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var licensed = false
+    private val termsFile = "TERMINOS_Y_CONDICIONES.txt"
+    private val acceptedKey = "accepted_terms_sha256"
+
+    private fun termsContent(): String =
+        assets.open(termsFile).bufferedReader(Charsets.UTF_8).use { it.readText() }
+
+    private fun termsHash(content: String): String =
+        MessageDigest.getInstance("SHA-256").digest(content.toByteArray(Charsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
+
+    private fun acceptanceValid(): Boolean {
+        val terms = termsContent()
+        return getSharedPreferences("personal_license", MODE_PRIVATE)
+            .getString(acceptedKey, "") == termsHash(terms)
+    }
+
+    private fun showLicense(required: Boolean, savedState: Bundle? = null) {
+        // Display before WebView, model downloading, playback or capture is available.
+        val title = TextView(this).apply {
+            text = "SOLO USO PERSONAL Y NO COMERCIAL"
+            textSize = 18f
+            setTextColor(Color.rgb(110, 26, 30))
+            setPadding(dp(16), dp(12), dp(16), dp(8))
+        }
+        val termsView = TextView(this).apply {
+            text = termsContent()
+            textSize = 13f
+            setTextColor(Color.rgb(25, 25, 25))
+            setTextIsSelectable(true)
+            setPadding(dp(16), dp(8), dp(16), dp(8))
+        }
+        val scroll = ScrollView(this).apply {
+            addView(termsView)
+        }
+        val checkbox = CheckBox(this).apply {
+            text = "He leído y acepto los términos: uso EXCLUSIVAMENTE personal y no comercial. Para uso comercial debo acordar previamente un convenio escrito con Master-Cas."
+            setTextColor(Color.rgb(30, 30, 30))
+            setPadding(dp(12), dp(4), dp(12), dp(8))
+            visibility = if (required) View.VISIBLE else View.GONE
+        }
+        val contents = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(title)
+            addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+            addView(checkbox)
+            setBackgroundColor(Color.WHITE)
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Términos y condiciones · Multi_Traductor")
+            .setView(contents)
+            .setCancelable(!required)
+            .setPositiveButton(if (required) "Acepto solo uso personal" else "Cerrar", null)
+            .apply {
+                if (required) setNegativeButton("No acepto · salir", null)
+            }.create()
+        dialog.setOnShowListener {
+            if (!required) return@setOnShowListener
+            val accept = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            accept.isEnabled = false
+            checkbox.setOnCheckedChangeListener { _,checked -> accept.isEnabled = checked }
+            accept.setOnClickListener {
+                if (!checkbox.isChecked) return@setOnClickListener
+                val digest = termsHash(termsContent())
+                val stored = getSharedPreferences("personal_license", MODE_PRIVATE)
+                    .edit().putString(acceptedKey, digest).commit()
+                if (!stored) {
+                    Toast.makeText(this, "No se pudo guardar la aceptación", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                dialog.dismiss()
+                startLicensedApp(savedState)
+            }
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setOnClickListener {
+                dialog.dismiss()
+                finishAndRemoveTask()
+            }
+        }
+        dialog.show()
+        val maxHeight = (resources.displayMetrics.heightPixels * 0.7f).toInt()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.93f).toInt(), maxHeight)
+    }
+
+    private fun startLicensedApp(state: Bundle?) {
+        licensed = true
+        (getSystemService(AUDIO_SERVICE) as AudioManager)
+            .setAllowedCapturePolicy(AudioAttributes.ALLOW_CAPTURE_BY_ALL)
+        createLayout()
+        configureWeb()
+        if (state == null || web.restoreState(state) == null) testPage()
+        handler.post(updateStatus)
+    }
     private val updateStatus = object : Runnable {
         override fun run() {
             if (::status.isInitialized) {
@@ -54,12 +148,8 @@ class MainActivity : Activity() {
 
     override fun onCreate(state:Bundle?) {
         super.onCreate(state)
-        (getSystemService(AUDIO_SERVICE) as AudioManager)
-            .setAllowedCapturePolicy(AudioAttributes.ALLOW_CAPTURE_BY_ALL)
-        createLayout()
-        configureWeb()
-        if (state == null || web.restoreState(state) == null) testPage()
-        handler.post(updateStatus)
+        if (acceptanceValid()) startLicensedApp(state)
+        else showLicense(required = true, savedState = state)
     }
     private fun dp(n:Int) = (n * resources.displayMetrics.density).toInt()
     private fun button(label:String, callback:()->Unit):Button = Button(this).apply {
@@ -84,6 +174,8 @@ class MainActivity : Activity() {
         toolbar.addView(address,LinearLayout.LayoutParams(0,dp(44),1f))
         toolbar.addView(button("Ir"){navigate()},LinearLayout.LayoutParams(dp(43),dp(44)))
         toolbar.addView(button("Test"){testPage()},LinearLayout.LayoutParams(dp(59),dp(44)))
+        toolbar.addView(button("Licencia"){ showLicense(required = false) },
+            LinearLayout.LayoutParams(dp(82), dp(44)))
         toolbar.addView(button("Modelo IA"){
             if(ModelManager.installed(this)) {
                 CaptureState.aiStatus="Modelo instalado; pulsa Escuchar"
@@ -222,6 +314,7 @@ class MainActivity : Activity() {
     }
     private fun orientation(o:Int){
         val landscape=o==Configuration.ORIENTATION_LANDSCAPE
+        if (!licensed) return
         subtitle.textSize=if(landscape)14f else 16f
         subtitle.layoutParams.height=dp(if(landscape)30 else 40)
     }
@@ -229,17 +322,19 @@ class MainActivity : Activity() {
         super.onConfigurationChanged(config);orientation(config.orientation)
     }
     override fun onSaveInstanceState(out:Bundle){
-        web.saveState(out);super.onSaveInstanceState(out)
+        if (licensed) web.saveState(out)
+        super.onSaveInstanceState(out)
     }
     @Deprecated("Android WebView navigation")
     override fun onBackPressed(){
+        if (!licensed) { finishAndRemoveTask(); return }
         if(customVideo!=null)hideVideo()
         else if(web.canGoBack())web.goBack()
         else super.onBackPressed()
     }
     override fun onDestroy(){
         handler.removeCallbacks(updateStatus)
-        web.destroy()
+        if (licensed) web.destroy()
         super.onDestroy()
     }
 }
