@@ -61,6 +61,13 @@ jobs:
           set -euo pipefail
           ! grep -Eq '^[[:space:]]*web\.(saveState|restoreState)\(' app/src/main/java/cl/bonvallarte/multitraductor/MainActivity.kt
           ! grep -Fq 'NewStringUTF(output.c_str())' app/src/main/cpp/whisper_jni.cpp
+      - name: Comprobar que AudioRecord no descarte audio durante Whisper
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'buffer.append(pcm, count, dbfs)' app/src/main/java/cl/bonvallarte/multitraductor/audio/WhisperPipeline.kt
+          ! grep -Eq 'busy.get\(\).*return' app/src/main/java/cl/bonvallarte/multitraductor/audio/WhisperPipeline.kt
+          grep -q 'fun retainsRemainderAtEveryBoundary' app/src/test/java/cl/bonvallarte/multitraductor/audio/AudioChunkBufferTest.kt
       - name: Test regresión UTF-8 nativo (entrada inválida)
         shell: bash
         run: |
@@ -95,7 +102,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p distribution
-          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.6_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
+          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.7_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
           cp LICENSE distribution/LICENSE
           cp TERMINOS_Y_CONDICIONES.txt distribution/TERMINOS_Y_CONDICIONES.txt
           cp AVISO_DESCARGA.txt distribution/LEEME_PRIMERO.txt
