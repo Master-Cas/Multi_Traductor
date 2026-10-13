@@ -55,6 +55,12 @@ jobs:
         with:
           gradle-version: '8.9'
       - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Evitar regresiones de estado WebView y JNI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eq '^[[:space:]]*web\.(saveState|restoreState)\(' app/src/main/java/cl/bonvallarte/multitraductor/MainActivity.kt
+          ! grep -Fq 'NewStringUTF(output.c_str())' app/src/main/cpp/whisper_jni.cpp
       - name: Test regresión UTF-8 nativo (entrada inválida)
         shell: bash
         run: |
