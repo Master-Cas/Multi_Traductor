@@ -67,6 +67,9 @@ Java_cl_bonvallarte_multitraductor_audio_WhisperNative_transcribe(
     // Never use NewStringUTF with raw Whisper output: it can contain truncated
     // multi-byte tokens and Android's CheckJNI aborts the entire application.
     // NewString takes verified UTF-16 code units, including non-BMP characters.
+    // Empty recognition is common after silence. JNI must not receive a null
+    // character buffer even for a zero-length NewString request.
+    if (output.empty()) return env->NewStringUTF("");
     const auto unicode = safe_unicode::utf8_to_utf16(output);
     const jchar * code_units = reinterpret_cast<const jchar *>(unicode.data());
     return env->NewString(code_units, static_cast<jsize>(unicode.size()));
