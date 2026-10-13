@@ -57,3 +57,12 @@ Whisper y GGML ahora se compilan con NDK 28 r28b y páginas flexibles de 16 KB. 
 - WebView ya no guarda/restaura el estado completo en Bundle, que causaba TransactionTooLargeException al enviar 652 KB de estado. Solo se guarda la URL pública (hasta 2048 caracteres) y se desactiva la persistencia automática del propio WebView.
 - CI ejecuta pruebas nativas de conversión, además de test Kotlin, verificación ELF de 16 KB y documentación de licencia.
 - Es una mitigación concreta de las trazas observadas; siguen siendo necesarias pruebas prolongadas con videos y audio reales.
+
+## Captura continua y supresión de repeticiones (0.2.7)
+
+- La captura PCM continúa durante la inferencia Whisper y las traducciones ML Kit: bloques de cinco segundos se encolan para su procesamiento sin descartar muestras por estado `busy`.
+- Cola temporal **máximo tres bloques de cinco segundos**, en memoria RAM, sin guardar audio ni enviarlo al Nitro/VPS. Si el procesador queda continuamente rezagado, se descarta el bloque pendiente más antiguo, se incrementa un contador visible y se preservan las frases recientes. No puede garantizarse un 100 % de frases traducidas en un dispositivo sobrecargado.
+- Se conserva el remanente de cada lectura PCM que cruza el límite entre ventanas (antes se perdía), y el reconocimiento puede avanzar sin esperar el callback de ML Kit.
+- Se filtran repeticiones consecutivas anormales de 3 o más palabras/frases iguales dentro de un bloque (p. ej., «Mi padre» x20), y se evita repetir exactamente el mismo subtítulo entre dos bloques consecutivos; nuevas frases diferentes no se eliminan.
+- Los resultados de traducción fuera de orden no pueden sobrescribir subtítulos más recientes. Las callbacks de una sesión detenida tampoco publican texto.
+- Nuevos tests unitarios cubren el audio durante la ocupación de Whisper, límites de bloques, saturación de la cola, silencios y deduplicación. Todavía faltan pruebas de carga con reproducción real en Android antes de declarar la mejora comprobada.
