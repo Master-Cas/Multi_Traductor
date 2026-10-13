@@ -1,0 +1,70 @@
+LICENCIA DE USO PERSONAL Y NO COMERCIAL — MULTI_TRADUCTOR
+Versión 1.0 — 12 de octubre de 2026
+
+Copyright (c) 2026 Master-Cas.
+Todos los derechos reservados sobre los componentes originales del proyecto
+en la medida en que correspondan a su titular.
+
+1. ALCANCE
+Esta licencia se aplica exclusivamente al código, documentación y otros
+materiales originales de Multi_Traductor cuyos derechos pertenezcan al
+titular del proyecto. No reemplaza las licencias ni las condiciones de uso
+de componentes de terceros.
+
+2. AUTORIZACIÓN DE USO PERSONAL
+Se concede a las personas físicas una autorización gratuita, limitada,
+no exclusiva e intransferible para descargar, examinar, compilar, instalar,
+ejecutar y modificar una copia de los componentes originales del proyecto
+únicamente para fines personales, privados y no comerciales.
+
+Esta autorización NO incluye el derecho a redistribuir, sublicenciar,
+vender, ofrecer a terceros como servicio ni publicar versiones modificadas
+o compilaciones del proyecto sin autorización adicional, sin perjuicio de
+las funciones de visualización y bifurcación permitidas por los propios
+términos de GitHub.
+
+3. USO COMERCIAL: AUTORIZACIÓN PREVIA
+No se autoriza el uso comercial o empresarial de los componentes originales
+de Multi_Traductor sin un convenio comercial previo y por escrito con el
+titular de los derechos.
+
+Se consideran usos comerciales, entre otros, su incorporación a productos
+o servicios comerciales, su distribución con fines de lucro, su
+monetización, su explotación por empresas o profesionales en actividades
+económicas y su prestación como servicio remunerado.
+
+Quien desee utilizar Multi_Traductor comercialmente debe contactar al
+titular a través de:
+https://github.com/Master-Cas/Multi_Traductor/issues
+
+La presentación de una solicitud no otorga permiso de uso comercial.
+Las condiciones, contraprestaciones y alcances deberán acordarse
+expresamente en un convenio separado por escrito.
+
+4. COMPONENTES DE TERCEROS
+Esta licencia NO se extiende a los componentes de terceros. Sus derechos
+y obligaciones siguen rigiéndose por las licencias y condiciones propias,
+incluso si se distribuyen junto con la aplicación.
+
+En particular:
+- whisper.cpp (ggml-org): licencia MIT.
+  https://github.com/ggml-org/whisper.cpp/blob/master/LICENSE
+- Google ML Kit: condiciones y licencias aplicables de Google.
+- Modelos de reconocimiento y traducción, así como muestras de audio:
+  condiciones de sus respectivos titulares o distribuidores.
+
+Nada de lo aquí dispuesto limita derechos concedidos directamente por los
+titulares de esos componentes externos.
+
+5. RESERVA DE DERECHOS
+Los derechos no concedidos expresamente quedan reservados al titular.
+Esta licencia no concede derechos sobre nombres, logotipos ni marcas.
+
+6. AUSENCIA DE GARANTÍAS
+Los componentes originales se proporcionan «tal cual», sin garantías
+expresas o implícitas en la medida permitida por la legislación aplicable.
+El titular no asume responsabilidad por daños derivados del uso del
+software en la máxima medida permitida por la ley.
+
+Para condiciones comerciales distintas, solicitar autorización por
+escrito antes de cualquier explotación comercial.

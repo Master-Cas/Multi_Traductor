@@ -1,0 +1,82 @@
+#include <jni.h>
+#include <android/log.h>
+#include <whisper.h>
+#include <algorithm>
+#include <cstdint>
+#include <string>
+#include "utf8_safe.h"
+
+#define WH_TAG "MT_WHISPER"
+#define WHLOG(...) __android_log_print(ANDROID_LOG_INFO, WH_TAG, __VA_ARGS__)
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_cl_bonvallarte_multitraductor_audio_WhisperNative_load(
+        JNIEnv * env, jobject, jstring path) {
+    if (!path) return 0;
+    const char * text = env->GetStringUTFChars(path, nullptr);
+    if (!text) return 0;
+    auto params = whisper_context_default_params();
+    params.use_gpu = false;
+    whisper_context * ctx = whisper_init_from_file_with_params(text, params);
+    env->ReleaseStringUTFChars(path, text);
+    WHLOG("whisper init %s", ctx ? "ok" : "failed");
+    return reinterpret_cast<jlong>(ctx);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_cl_bonvallarte_multitraductor_audio_WhisperNative_transcribe(
+        JNIEnv * env, jobject, jlong context, jfloatArray pcm) {
+    whisper_context * ctx = reinterpret_cast<whisper_context*>(context);
+    if (!ctx || !pcm) return env->NewStringUTF("");
+    const jsize count = env->GetArrayLength(pcm);
+    if (count < 16000 || count > 16000 * 30) return env->NewStringUTF("");
+    jfloat * audio = env->GetFloatArrayElements(pcm, nullptr);
+    if (!audio) return env->NewStringUTF("");
+    auto params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
+    params.n_threads = 4;
+    params.audio_ctx = 512;
+    params.max_tokens = 64;
+    params.no_timestamps = true;
+    params.single_segment = true;
+    params.print_progress = false;
+    params.print_realtime = false;
+    params.print_timestamps = false;
+    params.print_special = false;
+    params.translate = false;
+    params.no_context = true;
+    params.language = "auto";
+    params.suppress_blank = true;
+    params.suppress_nst = true;
+    params.greedy.best_of = 1;
+    params.temperature_inc = 0.0f;
+    WHLOG("ASR chunk starting: %d samples, 4 threads, ctx=512", int(count));
+    const int rc = whisper_full(ctx, params, audio, count);
+    WHLOG("ASR whisper_full returned: %d", rc);
+    env->ReleaseFloatArrayElements(pcm, audio, JNI_ABORT);
+    if (rc != 0) {
+        WHLOG("whisper_full failed: %d", rc);
+        return env->NewStringUTF("");
+    }
+    std::string output;
+    const int n = whisper_full_n_segments(ctx);
+    for (int i=0;i<n;i++) {
+        const char * part = whisper_full_get_segment_text(ctx,i);
+        if(part){ if(!output.empty()) output += " "; output += part; }
+    }
+    WHLOG("transcription decoded %d segments, %zu bytes",n,output.size());
+    // Never use NewStringUTF with raw Whisper output: it can contain truncated
+    // multi-byte tokens and Android's CheckJNI aborts the entire application.
+    // NewString takes verified UTF-16 code units, including non-BMP characters.
+    // Empty recognition is common after silence. JNI must not receive a null
+    // character buffer even for a zero-length NewString request.
+    if (output.empty()) return env->NewStringUTF("");
+    const auto unicode = safe_unicode::utf8_to_utf16(output);
+    const jchar * code_units = reinterpret_cast<const jchar *>(unicode.data());
+    return env->NewString(code_units, static_cast<jsize>(unicode.size()));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_cl_bonvallarte_multitraductor_audio_WhisperNative_unload(
+        JNIEnv *, jobject, jlong context) {
+    if (context) whisper_free(reinterpret_cast<whisper_context*>(context));
+}

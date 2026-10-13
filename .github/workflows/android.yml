@@ -1,0 +1,118 @@
+name: Android debug build
+on:
+  push:
+    branches: [main, 'feature/**']
+  pull_request:
+  workflow_dispatch:
+jobs:
+  remove_unlicensed_legacy_artifacts:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/android14-audio-capture-mvp'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Eliminar SOLO artefactos antiguos sin términos adjuntos
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api "repos/${GH_REPO}/actions/artifacts?per_page=100" --paginate --jq '.artifacts[] | select(.name == "multi-traductor-debug-apk") | .id' |
+            while IFS= read -r artifact_id; do
+              [ -n "$artifact_id" ] || continue
+              echo "Removing legacy unlicensed artifact ID: $artifact_id"
+              gh api --method DELETE "repos/${GH_REPO}/actions/artifacts/${artifact_id}" >/dev/null
+            done
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Verificar licencia y términos de uso obligatorio
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s LICENSE
+          test -s TERMINOS_Y_CONDICIONES.txt
+          cmp LICENSE TERMINOS_Y_CONDICIONES.txt
+          cmp LICENSE app/src/main/assets/TERMINOS_Y_CONDICIONES.txt
+          grep -qi 'No se autoriza el uso comercial' LICENSE
+          grep -qi 'convenio comercial previo y por escrito' LICENSE
+          grep -q 'showLicense(required = true' app/src/main/java/cl/bonvallarte/multitraductor/MainActivity.kt
+          grep -q 'acceptedKey' app/src/main/java/cl/bonvallarte/multitraductor/MainActivity.kt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Evitar regresiones de estado WebView y JNI
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eq '^[[:space:]]*web\.(saveState|restoreState)\(' app/src/main/java/cl/bonvallarte/multitraductor/MainActivity.kt
+          ! grep -Fq 'NewStringUTF(output.c_str())' app/src/main/cpp/whisper_jni.cpp
+      - name: Comprobar que AudioRecord no descarte audio durante Whisper
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'buffer.append(pcm, count, dbfs)' app/src/main/java/cl/bonvallarte/multitraductor/audio/WhisperPipeline.kt
+          ! grep -Eq 'busy.get\(\).*return' app/src/main/java/cl/bonvallarte/multitraductor/audio/WhisperPipeline.kt
+          grep -q 'fun retainsRemainderAtEveryBoundary' app/src/test/java/cl/bonvallarte/multitraductor/audio/AudioChunkBufferTest.kt
+      - name: Test regresión UTF-8 nativo (entrada inválida)
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -Iapp/src/main/cpp tests/native/utf8_safe_test.cpp -o /tmp/utf8_safe_test
+          /tmp/utf8_safe_test
+      - run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Verificar compatibilidad nativa con páginas de 16 KB
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          READELF="$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          ZIPALIGN="$ANDROID_HOME/build-tools/35.0.0/zipalign"
+          "$ZIPALIGN" -c -P 16 -v 4 "$APK" > /dev/null
+          mkdir -p /tmp/multitraductor-elf-check
+          unzip -o -q "$APK" 'lib/arm64-v8a/*.so' -d /tmp/multitraductor-elf-check
+          python3 - <<'PY16K'
+          import glob, subprocess, os, re
+          root='/tmp/multitraductor-elf-check/lib/arm64-v8a'
+          libs=glob.glob(root+'/*.so')
+          assert libs, 'APK without ARM64 libraries'
+          elf=os.environ['ANDROID_HOME']+'/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
+          for lib in libs:
+              output=subprocess.check_output([elf,'-l',lib],text=True)
+              loads=[int(line.split()[-1],16) for line in output.splitlines() if line.lstrip().startswith('LOAD ')]
+              print(os.path.basename(lib), 'LOAD p_align=', [hex(n) for n in loads])
+              assert loads and all(n >= 16384 for n in loads), f'ELF not 16 KB aligned: {lib}'
+          PY16K
+      - name: Preparar distribución con licencia OBLIGATORIA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p distribution
+          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.7_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
+          cp LICENSE distribution/LICENSE
+          cp TERMINOS_Y_CONDICIONES.txt distribution/TERMINOS_Y_CONDICIONES.txt
+          cp AVISO_DESCARGA.txt distribution/LEEME_PRIMERO.txt
+          (cd distribution && sha256sum ./*.apk > SHA256SUMS.txt)
+          test -s distribution/LICENSE && test -s distribution/TERMINOS_Y_CONDICIONES.txt
+          cmp distribution/LICENSE distribution/TERMINOS_Y_CONDICIONES.txt
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MULTI_TRADUCTOR_SOLO_USO_PERSONAL_NO_COMERCIAL_DEBUG
+          path: distribution/
+          if-no-files-found: error
+          retention-days: 14
