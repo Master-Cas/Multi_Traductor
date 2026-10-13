@@ -40,6 +40,7 @@ class MainActivity : Activity() {
     private var licensed = false
     private val termsFile = "TERMINOS_Y_CONDICIONES.txt"
     private val acceptedKey = "accepted_terms_sha256"
+    private val LAST_URL_KEY = "last_navigation_url"
 
     private fun termsContent(): String =
         assets.open(termsFile).bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -126,7 +127,16 @@ class MainActivity : Activity() {
             .setAllowedCapturePolicy(AudioAttributes.ALLOW_CAPTURE_BY_ALL)
         createLayout()
         configureWeb()
-        if (state == null || web.restoreState(state) == null) testPage()
+        // Restoring WebView's complete state creates huge Binder Bundles
+        // (TransactionTooLargeException on Android 16). Restore URL only.
+        val url = state?.getString(LAST_URL_KEY)
+        if (url != null && url.length <= 2048 &&
+            (url.startsWith("https://") || url.startsWith("http://")) &&
+            !url.startsWith("https://appassets.androidplatform.net/")) {
+            web.loadUrl(url)
+        } else {
+            testPage()
+        }
         handler.post(updateStatus)
     }
     private val updateStatus = object : Runnable {
@@ -188,7 +198,10 @@ class MainActivity : Activity() {
         },LinearLayout.LayoutParams(dp(102),dp(44)))
         root.addView(toolbar)
         webHolder=FrameLayout(this)
-        web=WebView(this)
+        web=WebView(this).apply {
+            // Do not save a large Chromium view-hierarchy state automatically.
+            isSaveEnabled = false
+        }
         webHolder.addView(web,FrameLayout.LayoutParams(-1,-1))
         root.addView(webHolder,LinearLayout.LayoutParams(-1,0,1f))
         val bottom=LinearLayout(this).apply {
@@ -322,7 +335,15 @@ class MainActivity : Activity() {
         super.onConfigurationChanged(config);orientation(config.orientation)
     }
     override fun onSaveInstanceState(out:Bundle){
-        if (licensed) web.saveState(out)
+        if (licensed && ::web.isInitialized) {
+            val url = web.url
+            if (url != null && url.length <= 2048 &&
+                (url.startsWith("https://") || url.startsWith("http://")) &&
+                !url.startsWith("https://appassets.androidplatform.net/")) {
+                out.putString(LAST_URL_KEY, url)
+            }
+        }
+        // Never call web.saveState(out): this caused 652 KB+ transactions.
         super.onSaveInstanceState(out)
     }
     @Deprecated("Android WebView navigation")

@@ -49,3 +49,11 @@ Android 16 mostró un aviso de bibliotecas nativas de ML Kit sin garantía de al
 ## Compatibilidad de 16 KB en APK 0.2.5
 
 Whisper y GGML ahora se compilan con NDK 28 r28b y páginas flexibles de 16 KB. GitHub Actions inspecciona **todas** las bibliotecas nativas ARM64 que van empaquetadas (Whisper, ML Kit, otras), comprobando ELF `PT_LOAD p_align >= 0x4000` y `zipalign -P 16` antes de permitir publicar la APK y la licencia. La Samsung SM-P620 usa páginas de 4 KB, de modo que las comprobaciones ELF/ZIP certifican el empaquetado; para validar ejecución real con páginas de 16 KB aún hace falta ese tipo de dispositivo.
+
+
+## Corrección de cierres 0.2.6 (Android 16)
+
+- La conversión del texto multilingüe de Whisper usa ahora validación UTF-8 y creación JNI con NewString desde UTF-16 seguro; bytes incompletos o malformados se sustituyen por U+FFFD en vez de provocar un aborto nativo de Android (NewStringUTF + CheckJNI).
+- WebView ya no guarda/restaura el estado completo en Bundle, que causaba TransactionTooLargeException al enviar 652 KB de estado. Solo se guarda la URL pública (hasta 2048 caracteres) y se desactiva la persistencia automática del propio WebView.
+- CI ejecuta pruebas nativas de conversión, además de test Kotlin, verificación ELF de 16 KB y documentación de licencia.
+- Es una mitigación concreta de las trazas observadas; siguen siendo necesarias pruebas prolongadas con videos y audio reales.

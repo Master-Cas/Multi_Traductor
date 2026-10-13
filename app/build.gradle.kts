@@ -9,8 +9,8 @@ android {
         applicationId = "cl.bonvallarte.multitraductor"
         minSdk = 29
         targetSdk = 34
-        versionCode = 7
-        versionName = "0.2.5"
+        versionCode = 8
+        versionName = "0.2.6"
     }
     ndkVersion = "28.2.13676358"
     defaultConfig {

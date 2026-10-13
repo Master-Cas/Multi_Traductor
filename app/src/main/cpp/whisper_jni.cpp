@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <string>
+#include "utf8_safe.h"
 
 #define WH_TAG "MT_WHISPER"
 #define WHLOG(...) __android_log_print(ANDROID_LOG_INFO, WH_TAG, __VA_ARGS__)
@@ -63,7 +64,12 @@ Java_cl_bonvallarte_multitraductor_audio_WhisperNative_transcribe(
         if(part){ if(!output.empty()) output += " "; output += part; }
     }
     WHLOG("transcription decoded %d segments, %zu bytes",n,output.size());
-    return env->NewStringUTF(output.c_str());
+    // Never use NewStringUTF with raw Whisper output: it can contain truncated
+    // multi-byte tokens and Android's CheckJNI aborts the entire application.
+    // NewString takes verified UTF-16 code units, including non-BMP characters.
+    const auto unicode = safe_unicode::utf8_to_utf16(output);
+    const jchar * code_units = reinterpret_cast<const jchar *>(unicode.data());
+    return env->NewString(code_units, static_cast<jsize>(unicode.size()));
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -55,6 +55,12 @@ jobs:
         with:
           gradle-version: '8.9'
       - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
+      - name: Test regresión UTF-8 nativo (entrada inválida)
+        shell: bash
+        run: |
+          set -euo pipefail
+          g++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -fno-omit-frame-pointer -Iapp/src/main/cpp tests/native/utf8_safe_test.cpp -o /tmp/utf8_safe_test
+          /tmp/utf8_safe_test
       - run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Verificar compatibilidad nativa con páginas de 16 KB
         shell: bash
@@ -83,7 +89,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p distribution
-          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.5_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
+          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.6_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
           cp LICENSE distribution/LICENSE
           cp TERMINOS_Y_CONDICIONES.txt distribution/TERMINOS_Y_CONDICIONES.txt
           cp AVISO_DESCARGA.txt distribution/LEEME_PRIMERO.txt
