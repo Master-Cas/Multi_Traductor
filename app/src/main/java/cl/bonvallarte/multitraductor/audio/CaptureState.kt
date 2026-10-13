@@ -13,5 +13,6 @@ object CaptureState {
     fun reset() {
         active = false; status = "Escucha detenida"
         levelDbfs = -90.0; framesReceived = 0L; firstNonSilentTime = 0L
+        originalText = ""; translatedText = ""
     }
 }
