@@ -9,11 +9,14 @@ android {
         applicationId = "cl.bonvallarte.multitraductor"
         minSdk = 29
         targetSdk = 34
-        versionCode = 6
-        versionName = "0.2.4"
+        versionCode = 7
+        versionName = "0.2.5"
     }
-    ndkVersion = "27.0.12077973"
-    defaultConfig { ndk { abiFilters += listOf("arm64-v8a") } }
+    ndkVersion = "28.2.13676358"
+    defaultConfig {
+        ndk { abiFilters += listOf("arm64-v8a") }
+        externalNativeBuild { cmake { arguments += "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON" } }
+    }
     externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

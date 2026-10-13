@@ -54,14 +54,36 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.0.12077973' 'cmake;3.22.1'
+      - run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'ndk;28.2.13676358' 'cmake;3.22.1'
       - run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Verificar compatibilidad nativa con páginas de 16 KB
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          READELF="$ANDROID_HOME/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf"
+          ZIPALIGN="$ANDROID_HOME/build-tools/35.0.0/zipalign"
+          "$ZIPALIGN" -c -P 16 -v 4 "$APK" > /dev/null
+          mkdir -p /tmp/multitraductor-elf-check
+          unzip -o -q "$APK" 'lib/arm64-v8a/*.so' -d /tmp/multitraductor-elf-check
+          python3 - <<'PY16K'
+          import glob, subprocess, os, re
+          root='/tmp/multitraductor-elf-check/lib/arm64-v8a'
+          libs=glob.glob(root+'/*.so')
+          assert libs, 'APK without ARM64 libraries'
+          elf=os.environ['ANDROID_HOME']+'/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-readelf'
+          for lib in libs:
+              output=subprocess.check_output([elf,'-l',lib],text=True)
+              loads=[int(line.split()[-1],16) for line in output.splitlines() if line.lstrip().startswith('LOAD ')]
+              print(os.path.basename(lib), 'LOAD p_align=', [hex(n) for n in loads])
+              assert loads and all(n >= 16384 for n in loads), f'ELF not 16 KB aligned: {lib}'
+          PY16K
       - name: Preparar distribución con licencia OBLIGATORIA
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p distribution
-          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.4_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
+          cp app/build/outputs/apk/debug/app-debug.apk distribution/Multi_Traductor_0.2.5_SOLO_USO_PERSONAL_NO_COMERCIAL.apk
           cp LICENSE distribution/LICENSE
           cp TERMINOS_Y_CONDICIONES.txt distribution/TERMINOS_Y_CONDICIONES.txt
           cp AVISO_DESCARGA.txt distribution/LEEME_PRIMERO.txt

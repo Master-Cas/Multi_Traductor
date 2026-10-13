@@ -5,7 +5,7 @@
 > **Licencia: uso personal y no comercial.** Se permite el uso privado de los componentes originales del proyecto, bajo las condiciones de [LICENSE](LICENSE). **Todo uso comercial requiere autorización previa y un convenio por escrito con Master-Cas.** Para solicitarlo, [contactar al titular por GitHub Issues](https://github.com/Master-Cas/Multi_Traductor/issues). Las dependencias de terceros mantienen sus propias licencias.
 
 
-**Estado: prototipo 0.2.3, reconocimiento y traducción local comprobados en tablet; en validación de compatibilidad.** App Android en Kotlin con WebView y franja de traducción inferior. Diseñada para Android 14 / teléfonos de gama media. `minSdk 29`, `targetSdk 34`, salida nativa ARM64; un dispositivo con Android 16 también es compatible.
+**Estado: prototipo 0.2.5, reconocimiento y traducción local comprobados en tablet; integración nativa compilada para 16 KB.** App Android en Kotlin con WebView y franja de traducción inferior. Diseñada para Android 14 / teléfonos de gama media. `minSdk 29`, `targetSdk 34`, salida nativa ARM64; un dispositivo con Android 16 también es compatible.
 
 ## Motor totalmente en el dispositivo
 
@@ -18,7 +18,7 @@
 ## Instalar y probar
 
 1. Clonar **recursivamente**: `git clone --recurse-submodules https://github.com/Master-Cas/Multi_Traductor.git` (usar rama de desarrollo del PR cuando no se haya fusionado a `main`).
-2. Abrir en Android Studio con JDK 17, Android SDK 35, NDK 27.0.12077973 y CMake 3.22.1.
+2. Abrir en Android Studio con JDK 17, Android SDK 35, NDK 28.2.13676358 y CMake 3.22.1.
 3. Instalar la APK debug. La app arranca en una página local de **Test** con un tono de 3 s y un archivo de voz de ejemplo `jfk.wav` de whisper.cpp.
 4. Pulsar **Modelo IA** para descargar y verificar el modelo multilingüe por HTTPS (32 MB; SHA-256 fijado).
 5. Pulsar **♫ Escuchar** y conceder permisos de audio y captura de pantalla de Android. Reproducir el ejemplo de voz. Esperar el reconocimiento; puede tardar más que el audio en teléfonos modestos.
@@ -45,3 +45,7 @@ Compilar: `gradle :app:testDebugUnitTest :app:assembleDebug`. El workflow de Git
 ## Compatibilidad Android 16/16 kB
 
 Android 16 mostró un aviso de bibliotecas nativas de ML Kit sin garantía de alineación ELF de 16 kB. La tablet probada ejecuta páginas de 4 kB (`getconf PAGE_SIZE=4096`) y pudo completar la prueba. Antes de una publicación general hay que validar bibliotecas en un dispositivo de 16 kB o actualizar las dependencias.
+
+## Compatibilidad de 16 KB en APK 0.2.5
+
+Whisper y GGML ahora se compilan con NDK 28 r28b y páginas flexibles de 16 KB. GitHub Actions inspecciona **todas** las bibliotecas nativas ARM64 que van empaquetadas (Whisper, ML Kit, otras), comprobando ELF `PT_LOAD p_align >= 0x4000` y `zipalign -P 16` antes de permitir publicar la APK y la licencia. La Samsung SM-P620 usa páginas de 4 KB, de modo que las comprobaciones ELF/ZIP certifican el empaquetado; para validar ejecución real con páginas de 16 KB aún hace falta ese tipo de dispositivo.
